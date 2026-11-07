@@ -50,18 +50,42 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadQuestionsFromExcel() {
   try {
-    const res = await fetch('questions/questions.xlsx');
+    // Cache-buster parameter ensures the latest uploaded Excel file is always downloaded
+    const res = await fetch('questions/questions.xlsx?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error("Fetch failed with status " + res.status);
+    
     const arrayBuffer = await res.arrayBuffer();
     const wb = XLSX.read(arrayBuffer, { type: 'array' });
     const sheetName = wb.SheetNames[0];
-    const data = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
-    if (data && data.length > 0) {
-      masterQuestionBank = data;
+    const rawData = XLSX.utils.sheet_to_json(wb.Sheets[sheetName]);
+
+    if (rawData && rawData.length > 0) {
+      // Normalize columns so variations like "Option A", "optionA", "Answer" work cleanly
+      masterQuestionBank = rawData.map(row => {
+        const getVal = (patterns) => {
+          for (const key of Object.keys(row)) {
+            const cleanKey = key.trim().toLowerCase().replace(/[\s_-]/g, '');
+            if (patterns.includes(cleanKey)) return row[key];
+          }
+          return '';
+        };
+
+        return {
+          Question: getVal(['question', 'q', 'questiontext']),
+          OptionA: getVal(['optiona', 'a', 'opta']),
+          OptionB: getVal(['optionb', 'b', 'optb']),
+          OptionC: getVal(['optionc', 'c', 'optc']),
+          OptionD: getVal(['optiond', 'd', 'optd']),
+          CorrectAnswer: (getVal(['correctanswer', 'answer', 'correct', 'ans']) || 'A').toString().trim().toUpperCase(),
+          Difficulty: Number(getVal(['difficulty', 'diff', 'level'])) || 1
+        };
+      });
+      console.log(`Successfully loaded ${masterQuestionBank.length} fresh questions from Excel.`);
     } else {
       masterQuestionBank = defaultQuestions;
     }
   } catch (err) {
+    console.warn("Using default questions fallback:", err);
     masterQuestionBank = defaultQuestions;
   }
 }

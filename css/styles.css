@@ -289,21 +289,20 @@ body {
 
 /* Player Screen */
 .player-container {
-  max-width: 580px;
-  width: 90%;
-  margin: 30px auto;
-  position: relative;
-  z-index: 1;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 12px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .name-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-.name-grid-full {
-  grid-column: span 2;
+  grid-template-columns: 1fr;
+  gap: 8px;
 }
 
 .input-field {

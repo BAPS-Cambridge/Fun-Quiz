@@ -1,6 +1,9 @@
 fun_quiz-baps
 Important Links
 
+Game Link: https://baps-cambridge.github.io/Fun-Quiz/index.html
+
+
 https://console.cloud.google.com/apis/credentials?project=fun-quiz-baps-9bc89
 https://share.gemini.google/GcOT7zjVgIZQ
 https://tilak-tr10.github.io/fun_quiz-baps/index.html

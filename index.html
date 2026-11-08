@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1200, initial-scale=1">
+  <title>Diwali Quiz Arena - Host & Live Leaderboard</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- SheetJS for 1-Click Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- QRCode.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="js/config.js"></script>
+</head>
+<body>
+
+  <!-- Fullscreen Canvas for Diwali Firecracker Explosions -->
+  <canvas id="fireworks-canvas"></canvas>
+
+  <div class="host-container">
+    
+    <!-- LEFT SIDEBAR: Host & Big QR Code -->
+    <div class="card host-sidebar">
+      
+      <!-- Festive Diwali Badge -->
+      <div class="badge-pill">
+        <span class="diya-icon">🪔</span> Happy Diwali • Live Quiz
+      </div>
+
+      <h2 style="font-size: 1.65rem; color: #ffd700; margin-top: 4px; letter-spacing: 0.5px;">
+        Scan to Play
+      </h2>
+      <p style="opacity: 0.85; font-size: 0.9rem; margin-top: 2px;">
+        Point your phone camera to join
+      </p>
+
+      <!-- BIGGER QR CODE (280px) -->
+      <div class="qr-frame">
+        <div id="qrcode"></div>
+      </div>
+      
+      <p id="game-link" style="font-size: 0.75rem; opacity: 0.7; word-break: break-all; margin-bottom: 8px; max-width: 320px;"></p>
+
+      <!-- CLICKABLE COMPACT TIMER (No bulky admin text, No 5m/10m) -->
+      <div style="position: relative; display: inline-block;">
+        <div class="timer-toggle-pill" id="timer-toggle" onclick="toggleTimerMenu(event)">
+          <span>⏱️</span>
+          <span id="current-timer-label">1 Minute</span>
+          <span style="font-size: 0.75rem; opacity: 0.7;">▼</span>
+        </div>
+
+        <!-- Inline Click-to-Change Dropdown -->
+        <div id="timer-popover" class="timer-dropdown-popover" style="display: none;">
+          <div style="font-size: 0.75rem; color: #ffd700; padding: 4px 8px; font-weight: 700; text-transform: uppercase;">Set Round Time</div>
+          <button class="timer-opt-btn" onclick="selectTimer(30, '30 Seconds')">⚡ 30 Seconds</button>
+          <button class="timer-opt-btn active" onclick="selectTimer(60, '1 Minute')">⏱️ 1 Minute</button>
+          <button class="timer-opt-btn" onclick="selectTimer(90, '1.5 Minutes')">⏱️ 1.5 Minutes</button>
+          <button class="timer-opt-btn" onclick="selectTimer(120, '2 Minutes')">⏱️ 2 Minutes</button>
+          <button class="timer-opt-btn" onclick="selectTimer(180, '3 Minutes')">⏱️ 3 Minutes</button>
+        </div>
+      </div>
+
+      <!-- ONLY ONE EXPORT BUTTON UNDER QR (Removed open player view) -->
+      <div class="action-row">
+        <button class="btn-primary" style="flex: 1;" onclick="exportLeaderboardToExcel()">
+          📥 Export to Excel (.xlsx)
+        </button>
+        <button class="btn-reset" onclick="clearLeaderboard()">
+          🗑️ Reset
+        </button>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: Live Leaderboard (Removed top-right duplicate export button) -->
+    <div class="card">
+      <div class="diwali-banner" style="justify-content: space-between; margin-bottom: 12px;">
+        <div>
+          <h1 style="font-size: 1.85rem; display: flex; align-items: center; gap: 10px; color: #ffffff;">
+            <span>🏆</span> Live Leaderboard
+            <span class="diya-icon">🪔</span>
+          </h1>
+          <p style="color: #00f0b5; font-size: 0.95rem; font-weight: 600; margin-top: 3px;">
+            <span id="player-count-badge">0</span> Contestants Recorded
+          </p>
+        </div>
+
+        <div style="font-size: 0.85rem; background: rgba(0,0,0,0.35); padding: 8px 18px; border-radius: 24px; border: 1px solid rgba(255,215,0,0.3); color: #ffd700;">
+          ⚡ Tiebreaker: Lowest time ranks higher
+        </div>
+      </div>
+
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th style="width: 75px;">Rank</th>
+            <th>Player Full Name</th>
+            <th style="width: 170px; text-align: center;">Questions Solved</th>
+            <th style="width: 150px; text-align: right;">Time Taken</th>
+            <th style="width: 150px; text-align: right;">Finished At</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <tr>
+            <td colspan="5" style="text-align: center; opacity: 0.6; padding: 50px;">
+              Waiting for contestants to scan & play...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- AI MASCOT: "Mitra the Diwali Bot" Roaming smoothly around host screen -->
+  <div id="ai-mascot">
+    <div class="mascot-speech-bubble">🪔 Happy Diwali!</div>
+    <div class="mascot-body">
+      <!-- Lightweight, GPU-accelerated SVG Mascot -->
+      <svg viewBox="0 0 100 110" width="100%" height="100%">
+        <!-- Diya aura glow -->
+        <circle cx="50" cy="55" r="42" fill="rgba(255, 215, 0, 0.2)" filter="drop-shadow(0 0 10px #ff7700)" />
+        <!-- Robot Body -->
+        <rect x="22" y="38" width="56" height="50" rx="16" fill="url(#botGrad)" stroke="#ffd700" stroke-width="2.5" />
+        <!-- Head -->
+        <rect x="28" y="16" width="44" height="30" rx="12" fill="#1e0838" stroke="#ffd700" stroke-width="2.5" />
+        <!-- Antenna & Diya Flame -->
+        <line x1="50" y1="16" x2="50" y2="6" stroke="#ffd700" stroke-width="2.5" />
+        <ellipse cx="50" cy="4" rx="4" ry="6" fill="#ff4500" />
+        <ellipse cx="50" cy="4" rx="2" ry="4" fill="#ffd700" />
+        <!-- Eyes (Glowing Cyan) -->
+        <circle cx="40" cy="30" r="5" fill="#00f0b5" filter="drop-shadow(0 0 4px #00f0b5)" />
+        <circle cx="60" cy="30" r="5" fill="#00f0b5" filter="drop-shadow(0 0 4px #00f0b5)" />
+        <circle cx="42" cy="28" r="1.5" fill="#ffffff" />
+        <circle cx="62" cy="28" r="1.5" fill="#ffffff" />
+        <!-- Smile -->
+        <path d="M 42 38 Q 50 44 58 38" stroke="#ffd700" stroke-width="2.5" fill="none" stroke-linecap="round" />
+        <!-- Chest Screen: Diya Motif -->
+        <rect x="32" y="52" width="36" height="24" rx="6" fill="#150228" stroke="rgba(255,215,0,0.5)" stroke-width="1.5" />
+        <path d="M 42 66 Q 50 72 58 66 Z" fill="#ff7700" />
+        <ellipse cx="50" cy="62" rx="2.5" ry="4" fill="#ffd700" />
+        <!-- Floating Hands -->
+        <ellipse cx="16" cy="60" rx="6" ry="6" fill="#ffd700" />
+        <ellipse cx="84" cy="60" rx="6" ry="6" fill="#ffd700" />
+        <defs>
+          <linearGradient id="botGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#3d1466" />
+            <stop offset="100%" stop-color="#19042d" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  </div>
+
+  <script src="js/fireworks.js"></script>
+  <script src="js/mascot.js"></script>
+  <script src="js/host.js"></script>
+</body>
+</html>

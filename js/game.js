@@ -116,16 +116,21 @@ function getNormalizedKey(f, m, l) {
 }
 
 async function checkIfPlayerAlreadyPlayed(normalizedKey) {
+  // 1. If Firebase is active, it is the ONLY source of truth!
   if (isFirebaseActive && db) {
     try {
       const snap = await db.ref('leaderboard/' + normalizedKey).once('value');
-      if (snap.exists()) return snap.val();
+      if (snap.exists()) {
+        return snap.val();
+      }
       return null;
     } catch (e) {
-      console.error("Firebase lookup error:", e);
+      console.warn("Firebase check error:", e);
+      return null; // Prevents blocking the player if Firebase is cleared or errors
     }
   }
 
+  // 2. Only check local storage if Firebase is completely disabled
   try {
     const localRaw = localStorage.getItem('quiz_leaderboard');
     if (localRaw) {
@@ -133,7 +138,8 @@ async function checkIfPlayerAlreadyPlayed(normalizedKey) {
       const match = list.find(p => p.normalizedKey === normalizedKey);
       if (match) return match;
     }
-  } catch(e) {}
+  } catch (e) {}
+
   return null;
 }
 
